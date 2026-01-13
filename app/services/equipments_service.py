@@ -1,11 +1,9 @@
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
-from typing import List, Optional
-from datetime import datetime
 
-from app.models import Equipment, AllEquipment
-from app.schemas import EquipmentResponse, AllEquipmentResponse
 from app.enums import Countries, EquipmentType
+from app.models import AllEquipment, Equipment
+from app.schemas import AllEquipmentResponse, EquipmentResponse
 from app.scraper import OryxScraper
 
 
@@ -16,9 +14,9 @@ class EquipmentsService:
     def get_equipments(
         self,
         country: Countries,
-        types: Optional[List[EquipmentType]] = None,
-        date: Optional[List[str]] = None,
-    ) -> List[EquipmentResponse]:
+        types: list[EquipmentType] | None = None,
+        date: list[str] | None = None,
+    ) -> list[EquipmentResponse]:
         """Get equipment data with filters."""
         query = self.db.query(Equipment)
 
@@ -32,21 +30,17 @@ class EquipmentsService:
             start_date = date[0]
             end_date = date[1]
             if start_date > end_date:
-                raise ValueError(
-                    "Start date should be before end date, please correct"
-                )
-            query = query.filter(
-                and_(Equipment.date >= start_date, Equipment.date <= end_date)
-            )
+                raise ValueError("Start date should be before end date, please correct")
+            query = query.filter(and_(Equipment.date >= start_date, Equipment.date <= end_date))
 
         results = query.all()
         return [EquipmentResponse.model_validate(r) for r in results]
 
     def get_total_equipments(
         self,
-        country: Optional[Countries] = None,
-        types: Optional[List[EquipmentType]] = None,
-    ) -> List[AllEquipmentResponse]:
+        country: Countries | None = None,
+        types: list[EquipmentType] | None = None,
+    ) -> list[AllEquipmentResponse]:
         """Get total equipment data with filters."""
         query = self.db.query(AllEquipment)
 
@@ -59,7 +53,7 @@ class EquipmentsService:
         results = query.order_by(AllEquipment.country, AllEquipment.type).all()
         return [AllEquipmentResponse.model_validate(r) for r in results]
 
-    def get_equipment_types(self) -> List[dict]:
+    def get_equipment_types(self) -> list[dict]:
         """Get distinct equipment types for Ukraine."""
         results = (
             self.db.query(AllEquipment.type)
@@ -72,13 +66,12 @@ class EquipmentsService:
 
     def import_equipments(self):
         """Import equipment data from scraper with incremental updates."""
-        from sqlalchemy.dialects.postgresql import insert
-        from sqlalchemy import text
+        from app.utils import upsert_equipment
 
         with OryxScraper() as scraper:
             data = scraper.scrape_equipments()
 
-        # Use upsert (INSERT ... ON CONFLICT) for incremental updates
+        # Use upsert for incremental updates
         for item in data:
             equipment_data = {
                 "country": item.get("country", ""),
@@ -91,25 +84,13 @@ class EquipmentsService:
                 "date": item.get("date_recorded", ""),
             }
 
-            # Use PostgreSQL-specific upsert or fallback to update-or-insert
-            stmt = insert(Equipment).values(**equipment_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["country", "type", "date"],
-                set_={
-                    "destroyed": stmt.excluded.destroyed,
-                    "abandoned": stmt.excluded.abandoned,
-                    "captured": stmt.excluded.captured,
-                    "damaged": stmt.excluded.damaged,
-                    "total": stmt.excluded.total,
-                },
-            )
-            self.db.execute(stmt)
+            upsert_equipment(self.db, equipment_data, Equipment)
 
         self.db.commit()
 
     def import_all_equipments(self):
         """Import all equipment totals from scraper with incremental updates."""
-        from sqlalchemy.dialects.postgresql import insert
+        from app.utils import upsert_all_equipment
 
         with OryxScraper() as scraper:
             data = scraper.scrape_all_equipments()
@@ -126,17 +107,6 @@ class EquipmentsService:
                 "total": int(item.get("type_total", 0) or 0),
             }
 
-            stmt = insert(AllEquipment).values(**equipment_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["country", "type"],
-                set_={
-                    "destroyed": stmt.excluded.destroyed,
-                    "abandoned": stmt.excluded.abandoned,
-                    "captured": stmt.excluded.captured,
-                    "damaged": stmt.excluded.damaged,
-                    "total": stmt.excluded.total,
-                },
-            )
-            self.db.execute(stmt)
+            upsert_all_equipment(self.db, equipment_data, AllEquipment)
 
         self.db.commit()

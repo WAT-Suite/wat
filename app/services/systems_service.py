@@ -1,10 +1,9 @@
-from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List, Optional
+from sqlalchemy.orm import Session
 
-from app.models import System, AllSystem
-from app.schemas import SystemResponse, AllSystemResponse
 from app.enums import Countries, Status
+from app.models import AllSystem, System
+from app.schemas import AllSystemResponse, SystemResponse
 from app.scraper import OryxScraper
 
 
@@ -15,14 +14,12 @@ class SystemsService:
     def get_systems(
         self,
         country: Countries,
-        systems: Optional[List[str]] = None,
-        status: Optional[List[Status]] = None,
-        date: Optional[List[str]] = None,
-    ) -> List[SystemResponse]:
+        systems: list[str] | None = None,
+        status: list[Status] | None = None,
+        date: list[str] | None = None,
+    ) -> list[SystemResponse]:
         """Get system data with filters."""
-        query = self.db.query(System).filter(
-            System.country.ilike(country.value)
-        )
+        query = self.db.query(System).filter(System.country.ilike(country.value))
 
         if systems:
             query = query.filter(System.system.in_(systems))
@@ -34,21 +31,17 @@ class SystemsService:
             start_date = date[0]
             end_date = date[1]
             if start_date > end_date:
-                raise ValueError(
-                    "Start date should be before end date, please correct"
-                )
-            query = query.filter(
-                and_(System.date >= start_date, System.date <= end_date)
-            )
+                raise ValueError("Start date should be before end date, please correct")
+            query = query.filter(and_(System.date >= start_date, System.date <= end_date))
 
         results = query.all()
         return [SystemResponse.model_validate(r) for r in results]
 
     def get_total_systems(
         self,
-        country: Optional[Countries] = None,
-        systems: Optional[List[str]] = None,
-    ) -> List[AllSystemResponse]:
+        country: Countries | None = None,
+        systems: list[str] | None = None,
+    ) -> list[AllSystemResponse]:
         """Get total system data with filters."""
         query = self.db.query(AllSystem)
 
@@ -61,18 +54,14 @@ class SystemsService:
         results = query.all()
         return [AllSystemResponse.model_validate(r) for r in results]
 
-    def get_system_types(self) -> List[dict]:
+    def get_system_types(self) -> list[dict]:
         """Get distinct system types."""
-        results = (
-            self.db.query(AllSystem.system)
-            .distinct()
-            .all()
-        )
+        results = self.db.query(AllSystem.system).distinct().all()
         return [{"system": r[0]} for r in results]
 
     def import_systems(self):
         """Import system data from scraper with incremental updates."""
-        from sqlalchemy.dialects.postgresql import insert
+        from app.utils import upsert_system
 
         with OryxScraper() as scraper:
             data = scraper.scrape_systems()
@@ -88,21 +77,13 @@ class SystemsService:
                 "date": item.get("date_recorded", ""),
             }
 
-            stmt = insert(System).values(**system_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["country", "system", "url", "date"],
-                set_={
-                    "origin": stmt.excluded.origin,
-                    "status": stmt.excluded.status,
-                },
-            )
-            self.db.execute(stmt)
+            upsert_system(self.db, system_data, System)
 
         self.db.commit()
 
     def import_all_systems(self):
         """Import all system totals from scraper with incremental updates."""
-        from sqlalchemy.dialects.postgresql import insert
+        from app.utils import upsert_system
 
         with OryxScraper() as scraper:
             data = scraper.scrape_all_systems()
@@ -119,17 +100,6 @@ class SystemsService:
                 "total": int(item.get("total", 0) or 0),
             }
 
-            stmt = insert(AllSystem).values(**system_data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["country", "system"],
-                set_={
-                    "destroyed": stmt.excluded.destroyed,
-                    "abandoned": stmt.excluded.abandoned,
-                    "captured": stmt.excluded.captured,
-                    "damaged": stmt.excluded.damaged,
-                    "total": stmt.excluded.total,
-                },
-            )
-            self.db.execute(stmt)
+            upsert_system(self.db, system_data, AllSystem)
 
         self.db.commit()
