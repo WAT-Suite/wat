@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.database import get_db
+from app.enums import Countries
 from app.schemas import (
+    AllEquipmentResponse,
+    EquipmentResponse,
     EquipmentsRequest,
     TotalEquipmentsRequest,
-    EquipmentResponse,
-    AllEquipmentResponse,
 )
-from app.enums import Countries
 from app.services.equipments_service import EquipmentsService
 
 router = APIRouter(prefix="/api/stats", tags=["Equipments"])
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/api/stats", tags=["Equipments"])
 
 @router.post(
     "/equipments/{country}",
-    response_model=List[EquipmentResponse],
+    response_model=list[EquipmentResponse],
     summary="Get equipment data by country",
 )
 def get_equipments(
@@ -45,7 +44,7 @@ def get_equipments(
 
 @router.post(
     "/equipments",
-    response_model=List[AllEquipmentResponse],
+    response_model=list[AllEquipmentResponse],
     summary="Get total equipment data",
 )
 def get_total_equipments(
@@ -62,7 +61,7 @@ def get_total_equipments(
 
 @router.get(
     "/equipment-types",
-    response_model=List[dict],
+    response_model=list[dict],
     summary="Get equipment types",
 )
 def get_equipment_types(db: Session = Depends(get_db)):

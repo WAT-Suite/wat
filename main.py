@@ -1,18 +1,18 @@
 """
 FastAPI application for War Track Dashboard API.
 """
+
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine, Base, SessionLocal
-from app.routers import equipments, systems
-from app.routers import import_router
+from app.database import Base, SessionLocal, engine
+from app.routers import equipments, import_router, systems
 from app.services.equipments_service import EquipmentsService
 from app.services.systems_service import SystemsService
-
 
 # Initialize scheduler
 scheduler = AsyncIOScheduler()

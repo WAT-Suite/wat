@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+
 from app.enums import Countries, EquipmentType, Status
 
 
 class EquipmentsRequest(BaseModel):
-    types: Optional[List[EquipmentType]] = None
-    date: Optional[List[str]] = Field(
+    types: list[EquipmentType] | None = None
+    date: list[str] | None = Field(
         None,
         min_length=2,
         max_length=2,
@@ -14,14 +14,14 @@ class EquipmentsRequest(BaseModel):
 
 
 class TotalEquipmentsRequest(BaseModel):
-    country: Optional[Countries] = None
-    types: Optional[List[EquipmentType]] = None
+    country: Countries | None = None
+    types: list[EquipmentType] | None = None
 
 
 class SystemsRequest(BaseModel):
-    systems: Optional[List[str]] = None
-    status: Optional[List[Status]] = None
-    date: Optional[List[str]] = Field(
+    systems: list[str] | None = None
+    status: list[Status] | None = None
+    date: list[str] | None = Field(
         None,
         min_length=2,
         max_length=2,
@@ -30,8 +30,8 @@ class SystemsRequest(BaseModel):
 
 
 class TotalSystemsRequest(BaseModel):
-    country: Optional[Countries] = None
-    systems: Optional[List[str]] = None
+    country: Countries | None = None
+    systems: list[str] | None = None
 
 
 class EquipmentResponse(BaseModel):

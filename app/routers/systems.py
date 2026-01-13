@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.database import get_db
+from app.enums import Countries
 from app.schemas import (
+    AllSystemResponse,
+    SystemResponse,
     SystemsRequest,
     TotalSystemsRequest,
-    SystemResponse,
-    AllSystemResponse,
 )
-from app.enums import Countries
 from app.services.systems_service import SystemsService
 
 router = APIRouter(prefix="/api/stats", tags=["Systems"])
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/api/stats", tags=["Systems"])
 
 @router.post(
     "/systems/{country}",
-    response_model=List[SystemResponse],
+    response_model=list[SystemResponse],
     summary="Get system data by country",
 )
 def get_systems(
@@ -46,7 +45,7 @@ def get_systems(
 
 @router.post(
     "/systems",
-    response_model=List[AllSystemResponse],
+    response_model=list[AllSystemResponse],
     summary="Get total system data",
 )
 def get_total_systems(
@@ -63,7 +62,7 @@ def get_total_systems(
 
 @router.get(
     "/system-types",
-    response_model=List[dict],
+    response_model=list[dict],
     summary="Get system types",
 )
 def get_system_types(db: Session = Depends(get_db)):

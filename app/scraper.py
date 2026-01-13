@@ -4,11 +4,12 @@ Based on implementations from:
 - https://github.com/jessicaw9910/oryx
 - https://github.com/d-paulus/scrape_oryx_py
 """
+
 import csv
 import io
-from typing import List, Dict, Any
+from typing import Any
+
 import httpx
-from bs4 import BeautifulSoup
 
 
 class OryxScraper:
@@ -19,7 +20,7 @@ class OryxScraper:
     def __init__(self):
         self.client = httpx.Client(timeout=30.0)
 
-    def fetch_csv_data(self, url: str) -> List[Dict[str, Any]]:
+    def fetch_csv_data(self, url: str) -> list[dict[str, Any]]:
         """Fetch CSV data from a URL and return as list of dictionaries."""
         try:
             response = self.client.get(url)
@@ -32,7 +33,7 @@ class OryxScraper:
         except Exception as e:
             raise Exception(f"Failed to fetch CSV from {url}: {e}")
 
-    def scrape_equipments(self) -> List[Dict[str, Any]]:
+    def scrape_equipments(self) -> list[dict[str, Any]]:
         """
         Scrape daily equipment count data.
         Returns data from: https://raw.githubusercontent.com/scarnecchia/oryx_data/main/daily_count.csv
@@ -40,7 +41,7 @@ class OryxScraper:
         url = "https://raw.githubusercontent.com/scarnecchia/oryx_data/main/daily_count.csv"
         return self.fetch_csv_data(url)
 
-    def scrape_all_equipments(self) -> List[Dict[str, Any]]:
+    def scrape_all_equipments(self) -> list[dict[str, Any]]:
         """
         Scrape total equipment by type data.
         Returns data from: https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_type.csv
@@ -48,7 +49,7 @@ class OryxScraper:
         url = "https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_type.csv"
         return self.fetch_csv_data(url)
 
-    def scrape_systems(self) -> List[Dict[str, Any]]:
+    def scrape_systems(self) -> list[dict[str, Any]]:
         """
         Scrape totals by system data.
         Returns data from: https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_system.csv
@@ -56,12 +57,14 @@ class OryxScraper:
         url = "https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_system.csv"
         return self.fetch_csv_data(url)
 
-    def scrape_all_systems(self) -> List[Dict[str, Any]]:
+    def scrape_all_systems(self) -> list[dict[str, Any]]:
         """
         Scrape totals by system wide data.
         Returns data from: https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_system_wide.csv
         """
-        url = "https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_system_wide.csv"
+        url = (
+            "https://raw.githubusercontent.com/scarnecchia/oryx_data/main/totals_by_system_wide.csv"
+        )
         return self.fetch_csv_data(url)
 
     def close(self):

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, UniqueConstraint
+
 from app.database import Base
 
 
@@ -32,9 +33,7 @@ class AllEquipment(Base):
     damaged = Column(Integer, nullable=False)
     total = Column(Integer, nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("country", "type", name="uq_all_equipment_country_type"),
-    )
+    __table_args__ = (UniqueConstraint("country", "type", name="uq_all_equipment_country_type"),)
 
 
 class System(Base):
@@ -49,7 +48,9 @@ class System(Base):
     date = Column(String, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("country", "system", "url", "date", name="uq_system_country_system_url_date"),
+        UniqueConstraint(
+            "country", "system", "url", "date", name="uq_system_country_system_url_date"
+        ),
     )
 
 
@@ -65,6 +66,4 @@ class AllSystem(Base):
     damaged = Column(Integer, nullable=False)
     total = Column(Integer, nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("country", "system", name="uq_all_system_country_system"),
-    )
+    __table_args__ = (UniqueConstraint("country", "system", name="uq_all_system_country_system"),)
