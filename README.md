@@ -175,23 +175,29 @@ war-assets-tracker/
 ## Data Updates
 
 The system uses **incremental updates** (upserts) instead of full data replacement:
-- New records are inserted
-- Existing records (based on unique constraints) are updated
-- This ensures efficient updates without deleting all data
-- Unique constraints:
-  - `Equipment`: (country, type, date)
-  - `AllEquipment`: (country, type)
-  - `System`: (country, system, url, date)
-  - `AllSystem`: (country, system)
+- ✅ **New records are inserted** when they don't exist
+- ✅ **Existing records are updated** based on unique constraints
+- ✅ **No data deletion** - only updates changed records
+- ✅ **Efficient updates** - only processes new/changed data from scraper
+
+Unique constraints for upsert operations:
+- `Equipment`: (country, type, date) - Updates existing records for same country/type/date
+- `AllEquipment`: (country, type) - Updates totals for same country/type
+- `System`: (country, system, url, date) - Updates specific system instances
+- `AllSystem`: (country, system) - Updates totals for same country/system
 
 ## Query Filters
 
 All endpoints support filtering:
 
 ### Date Filters
+- ✅ **Fully supported** on equipment and system endpoints
 - Format: `["YYYY-MM-DD", "YYYY-MM-DD"]` (start date, end date)
 - Example: `{"date": ["2023-01-01", "2023-12-31"]}`
-- Available on: `/equipments/{country}` and `/systems/{country}`
+- Available on:
+  - `POST /api/stats/equipments/{country}` - Filter equipment by date range
+  - `POST /api/stats/systems/{country}` - Filter systems by date range
+- Validation: Start date must be before or equal to end date
 
 ### Other Filters
 - **Equipment types**: Filter by equipment type (e.g., "Tanks", "Aircraft")
