@@ -2,10 +2,11 @@
 """
 Migration runner script that executes SQL migrations in order.
 """
-import os
 import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine, text
+
 from app.database import settings
 
 # Add parent directory to path
@@ -45,7 +46,7 @@ def apply_migration(engine, migration_file):
     version = migration_file.stem
     print(f"Applying migration: {version}")
 
-    with open(migration_file, "r") as f:
+    with open(migration_file) as f:
         migration_sql = f.read()
 
     with engine.begin() as conn:
@@ -98,11 +99,7 @@ def run_migrations():
         applied_migrations = get_applied_migrations(engine)
         migration_files = get_migration_files()
 
-        pending_migrations = [
-            f
-            for f in migration_files
-            if f.stem not in applied_migrations
-        ]
+        pending_migrations = [f for f in migration_files if f.stem not in applied_migrations]
 
         if not pending_migrations:
             print("✓ No pending migrations")
