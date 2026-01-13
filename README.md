@@ -74,6 +74,28 @@ Once the server is running, visit:
 
 ## Development
 
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality. Install and set up:
+
+```bash
+# Install pre-commit
+uv sync --dev
+
+# Install git hooks
+uv run pre-commit install
+
+# Run pre-commit on all files
+uv run pre-commit run --all-files
+```
+
+The hooks will automatically run on `git commit` and check:
+- Code formatting (black)
+- Linting (ruff)
+- Type checking (mypy)
+- YAML/JSON/TOML validation
+- Trailing whitespace and end-of-file fixes
+
 ### Running migrations manually
 
 ```bash
@@ -91,6 +113,35 @@ python scripts/run_migrations.py
 
 # Start server
 uvicorn main:app --reload
+```
+
+### Running tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=app --cov-report=term-missing
+
+# Run only unit tests
+uv run pytest -m "not integration"
+```
+
+### Running CI checks locally
+
+```bash
+# Format code
+uv run black --check .
+
+# Lint code
+uv run ruff check .
+
+# Type check
+uv run mypy app --ignore-missing-imports
+
+# Run tests
+uv run pytest --cov=app --cov-report=xml --cov-report=term-missing -m "not integration"
 ```
 
 ## Project Structure
@@ -121,9 +172,43 @@ war-assets-tracker/
 └── Dockerfile              # Application container
 ```
 
+## Data Updates
+
+The system uses **incremental updates** (upserts) instead of full data replacement:
+- ✅ **New records are inserted** when they don't exist
+- ✅ **Existing records are updated** based on unique constraints
+- ✅ **No data deletion** - only updates changed records
+- ✅ **Efficient updates** - only processes new/changed data from scraper
+
+Unique constraints for upsert operations:
+- `Equipment`: (country, type, date) - Updates existing records for same country/type/date
+- `AllEquipment`: (country, type) - Updates totals for same country/type
+- `System`: (country, system, url, date) - Updates specific system instances
+- `AllSystem`: (country, system) - Updates totals for same country/system
+
+## Query Filters
+
+All endpoints support filtering:
+
+### Date Filters
+- ✅ **Fully supported** on equipment and system endpoints
+- Format: `["YYYY-MM-DD", "YYYY-MM-DD"]` (start date, end date)
+- Example: `{"date": ["2023-01-01", "2023-12-31"]}`
+- Available on:
+  - `POST /api/stats/equipments/{country}` - Filter equipment by date range
+  - `POST /api/stats/systems/{country}` - Filter systems by date range
+- Validation: Start date must be before or equal to end date
+
+### Other Filters
+- **Equipment types**: Filter by equipment type (e.g., "Tanks", "Aircraft")
+- **Systems**: Filter by system name
+- **Status**: Filter by status (destroyed, abandoned, captured, damaged)
+- **Country**: Filter by country (ukraine, russia, all)
+
 ## Notes
 
 - Data is automatically imported daily at 1 PM via APScheduler
 - Migrations run automatically on container startup
 - The scraper fetches data from the Oryx GitHub repository CSV files
 - All endpoints match the NestJS API structure for compatibility
+- Updates are incremental - only changed records are updated
