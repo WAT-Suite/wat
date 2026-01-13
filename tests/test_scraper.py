@@ -1,8 +1,11 @@
 """
 Tests for scraper service.
 """
-import pytest
+
 from unittest.mock import Mock, patch
+
+import pytest
+
 from app.scraper import OryxScraper
 
 

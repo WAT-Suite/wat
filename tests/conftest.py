@@ -1,15 +1,14 @@
 """
 Pytest configuration and fixtures.
 """
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
-from app.models import Equipment, AllEquipment, System, AllSystem
 from main import app
-
 
 # Test database URL (in-memory SQLite for faster tests)
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -33,6 +32,7 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Create a test client with database override."""
+
     def override_get_db():
         try:
             yield db_session

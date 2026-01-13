@@ -1,9 +1,11 @@
 """
 Tests for system endpoints and services.
 """
+
 import pytest
-from app.models import System, AllSystem
+
 from app.enums import Countries, Status
+from app.models import AllSystem, System
 from app.services.systems_service import SystemsService
 
 

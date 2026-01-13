@@ -1,9 +1,11 @@
 """
 Tests for equipment endpoints and services.
 """
+
 import pytest
-from app.models import Equipment, AllEquipment
+
 from app.enums import Countries, EquipmentType
+from app.models import AllEquipment, Equipment
 from app.services.equipments_service import EquipmentsService
 
 
