@@ -6,13 +6,10 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv sync --frozen
+# Install dependencies (production only, no dev dependencies)
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY . .
-
-# Run migrations and start server
-CMD ["sh", "-c", "uv run python scripts/run_migrations.py && uv run uvicorn main:app --host 0.0.0.0 --port 8000"]
