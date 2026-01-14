@@ -27,18 +27,52 @@ async def lifespan(app: FastAPI):
     # Ensure database tables exist
     Base.metadata.create_all(bind=engine)
 
+    # Check if database is empty and import historical data if needed
+    db = SessionLocal()
+    try:
+        from app.models import Equipment
+
+        # Check if we have any equipment data
+        equipment_count = db.query(Equipment).count()
+        if equipment_count == 0:
+            print("Database is empty - importing historical data...")
+            equipments_service = EquipmentsService(db)
+            systems_service = SystemsService(db)
+
+            try:
+                print("Importing all historical equipment data...")
+                equipments_service.import_equipments(import_all=True)
+                equipments_service.import_all_equipments()
+                print("Importing all historical system data...")
+                systems_service.import_systems(import_all=True)
+                systems_service.import_all_systems()
+                print("✓ Historical data import completed")
+            except Exception as e:
+                print(f"⚠ Warning: Failed to import historical data on startup: {e}")
+                print("You can manually import using: python scripts/import_historical_data.py")
+                print("Or via API: POST /api/import/historical")
+        else:
+            print(
+                f"Database already has {equipment_count} equipment records - skipping historical import"
+            )
+    except Exception as e:
+        print(f"⚠ Warning: Could not check database status: {e}")
+    finally:
+        db.close()
+
     # Schedule daily imports at 1 PM
     def import_all_data():
-        """Import all data from scraper."""
+        """Import new data from scraper (only dates we don't have yet)."""
         db = SessionLocal()
         try:
             equipments_service = EquipmentsService(db)
             systems_service = SystemsService(db)
 
-            print("Running scheduled import...")
-            equipments_service.import_equipments()
+            print("Running scheduled import (new data only)...")
+            # import_all=False means only import new dates
+            equipments_service.import_equipments(import_all=False)
             equipments_service.import_all_equipments()
-            systems_service.import_systems()
+            systems_service.import_systems(import_all=False)
             systems_service.import_all_systems()
             print("Scheduled import completed")
         except Exception as e:

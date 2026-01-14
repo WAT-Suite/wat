@@ -64,16 +64,37 @@ def import_all_systems(
 def import_all(
     db: Session = Depends(get_db),
 ):
-    """Trigger import of all data from scraper."""
+    """Trigger import of all new data from scraper (only dates we don't have yet)."""
     try:
         equipments_service = EquipmentsService(db)
         systems_service = SystemsService(db)
 
-        equipments_service.import_equipments()
+        # import_all=False means only import new dates
+        equipments_service.import_equipments(import_all=False)
         equipments_service.import_all_equipments()
-        systems_service.import_systems()
+        systems_service.import_systems(import_all=False)
         systems_service.import_all_systems()
 
         return {"message": "All data imported successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
+
+@router.post("/historical", summary="Import all historical data")
+def import_historical(
+    db: Session = Depends(get_db),
+):
+    """Trigger import of all historical data from scraper (ignores existing dates)."""
+    try:
+        equipments_service = EquipmentsService(db)
+        systems_service = SystemsService(db)
+
+        # import_all=True means import all data regardless of existing dates
+        equipments_service.import_equipments(import_all=True)
+        equipments_service.import_all_equipments()
+        systems_service.import_systems(import_all=True)
+        systems_service.import_all_systems()
+
+        return {"message": "All historical data imported successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")

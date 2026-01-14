@@ -54,25 +54,48 @@ class EquipmentsService:
         return [AllEquipmentResponse.model_validate(r) for r in results]
 
     def get_equipment_types(self) -> list[dict]:
-        """Get distinct equipment types for Ukraine."""
-        results = (
-            self.db.query(AllEquipment.type)
-            .filter(AllEquipment.country.ilike(Countries.UKRAINE.value))
-            .distinct()
-            .order_by(AllEquipment.type)
-            .all()
-        )
+        """Get distinct equipment types for all countries."""
+        results = self.db.query(AllEquipment.type).distinct().order_by(AllEquipment.type).all()
         return [{"type": r[0]} for r in results]
 
-    def import_equipments(self):
-        """Import equipment data from scraper with incremental updates."""
+    def import_equipments(self, import_all: bool = False):
+        """
+        Import equipment data from scraper with incremental updates.
+        Only imports data for dates that don't exist in the database.
+
+        Args:
+            import_all: If True, import all data regardless of existing dates.
+                       If False, only import new dates (default).
+        """
         from app.utils import upsert_equipment
+
+        # Get existing dates from database
+        existing_dates = set()
+        if not import_all:
+            existing_records = self.db.query(Equipment.date).distinct().all()
+            existing_dates = {record[0] for record in existing_records}
 
         with OryxScraper() as scraper:
             data = scraper.scrape_equipments()
 
+        # Filter out dates we already have (unless import_all is True)
+        new_data = []
+        if import_all:
+            new_data = data
+        else:
+            for item in data:
+                date_recorded = item.get("date_recorded", "")
+                if date_recorded and date_recorded not in existing_dates:
+                    new_data.append(item)
+
+        if not new_data:
+            print(f"No new equipment data to import (existing dates: {len(existing_dates)})")
+            return
+
+        print(f"Importing {len(new_data)} new equipment records...")
+
         # Use upsert for incremental updates
-        for item in data:
+        for item in new_data:
             equipment_data = {
                 "country": item.get("country", ""),
                 "type": item.get("equipment_type", ""),
@@ -87,6 +110,7 @@ class EquipmentsService:
             upsert_equipment(self.db, equipment_data, Equipment)
 
         self.db.commit()
+        print(f"✓ Successfully imported {len(new_data)} equipment records")
 
     def import_all_equipments(self):
         """Import all equipment totals from scraper with incremental updates."""

@@ -66,11 +66,12 @@ Once the server is running, visit:
 - `GET /api/stats/system-types` - Get system types
 
 ### Import
-- `POST /api/import/equipments` - Manually trigger equipment import
-- `POST /api/import/all-equipments` - Manually trigger all equipment import
-- `POST /api/import/systems` - Manually trigger system import
-- `POST /api/import/all-systems` - Manually trigger all system import
-- `POST /api/import/all` - Import all data
+- `POST /api/import/equipments` - Manually trigger equipment import (new dates only)
+- `POST /api/import/all-equipments` - Manually trigger all equipment totals import
+- `POST /api/import/systems` - Manually trigger system import (new dates only)
+- `POST /api/import/all-systems` - Manually trigger all system totals import
+- `POST /api/import/all` - Import all new data (new dates only)
+- `POST /api/import/historical` - Import all historical data (ignores existing dates)
 
 ## Development
 
@@ -101,6 +102,22 @@ The hooks will automatically run on `git commit` and check:
 ```bash
 python scripts/run_migrations.py
 ```
+
+### Importing historical data
+
+To import all historical data from Oryx (first-time setup):
+
+```bash
+python scripts/import_historical_data.py
+```
+
+This script will:
+- Import all available historical equipment data
+- Import all equipment totals
+- Import all available historical system data
+- Import all system totals
+
+**Note**: Regular imports (via API or scheduled) only import new dates that don't exist in the database. Use the historical import script for initial data population.
 
 ### Running the server locally (without Docker)
 
@@ -165,7 +182,8 @@ war-assets-tracker/
 ├── migrations/              # SQL migration files
 │   └── 001_initial_schema.sql
 ├── scripts/
-│   └── run_migrations.py    # Migration runner
+│   ├── run_migrations.py         # Migration runner
+│   └── import_historical_data.py # Historical data import script
 ├── main.py                  # FastAPI application
 ├── pyproject.toml           # Project dependencies
 ├── docker-compose.yml       # Docker setup
@@ -178,7 +196,9 @@ The system uses **incremental updates** (upserts) instead of full data replaceme
 - ✅ **New records are inserted** when they don't exist
 - ✅ **Existing records are updated** based on unique constraints
 - ✅ **No data deletion** - only updates changed records
-- ✅ **Efficient updates** - only processes new/changed data from scraper
+- ✅ **Smart date filtering** - only imports data for dates that don't exist in the database
+- ✅ **Live data scraping** - uses `oryx-wat-scraper` library to scrape directly from Oryx blog
+- ✅ **Efficient updates** - scheduled imports only process new dates, not existing ones
 
 Unique constraints for upsert operations:
 - `Equipment`: (country, type, date) - Updates existing records for same country/type/date
@@ -209,6 +229,8 @@ All endpoints support filtering:
 
 - Data is automatically imported daily at 1 PM via APScheduler
 - Migrations run automatically on container startup
-- The scraper fetches data from the Oryx GitHub repository CSV files
+- The scraper uses `oryx-wat-scraper` library to scrape directly from the Oryx blog
 - All endpoints match the NestJS API structure for compatibility
-- Updates are incremental - only changed records are updated
+- Updates are incremental - only new dates are imported (existing dates are skipped)
+- Use `scripts/import_historical_data.py` for initial data population
+- Regular imports only fetch new data, making them fast and efficient

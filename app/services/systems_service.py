@@ -59,15 +59,44 @@ class SystemsService:
         results = self.db.query(AllSystem.system).distinct().all()
         return [{"system": r[0]} for r in results]
 
-    def import_systems(self):
-        """Import system data from scraper with incremental updates."""
+    def import_systems(self, import_all: bool = False):
+        """
+        Import system data from scraper with incremental updates.
+        Only imports data for dates that don't exist in the database.
+
+        Args:
+            import_all: If True, import all data regardless of existing dates.
+                       If False, only import new dates (default).
+        """
         from app.utils import upsert_system
+
+        # Get existing dates from database
+        existing_dates = set()
+        if not import_all:
+            existing_records = self.db.query(System.date).distinct().all()
+            existing_dates = {record[0] for record in existing_records}
 
         with OryxScraper() as scraper:
             data = scraper.scrape_systems()
 
+        # Filter out dates we already have (unless import_all is True)
+        new_data = []
+        if import_all:
+            new_data = data
+        else:
+            for item in data:
+                date_recorded = item.get("date_recorded", "")
+                if date_recorded and date_recorded not in existing_dates:
+                    new_data.append(item)
+
+        if not new_data:
+            print(f"No new system data to import (existing dates: {len(existing_dates)})")
+            return
+
+        print(f"Importing {len(new_data)} new system records...")
+
         # Use upsert for incremental updates
-        for item in data:
+        for item in new_data:
             system_data = {
                 "country": item.get("country", ""),
                 "origin": item.get("origin", ""),
@@ -80,6 +109,7 @@ class SystemsService:
             upsert_system(self.db, system_data, System)
 
         self.db.commit()
+        print(f"✓ Successfully imported {len(new_data)} system records")
 
     def import_all_systems(self):
         """Import all system totals from scraper with incremental updates."""
